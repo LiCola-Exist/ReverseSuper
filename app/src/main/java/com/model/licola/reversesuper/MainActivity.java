@@ -11,7 +11,7 @@ public class MainActivity extends AppCompatActivity {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
 
-    ModelManager impl = new ModelManagerImpl();
+    AccountManager impl = new AccountManagerImpl();
 
     Log.d("MainActivity", impl.reverseMethod("调用方法"));
   }

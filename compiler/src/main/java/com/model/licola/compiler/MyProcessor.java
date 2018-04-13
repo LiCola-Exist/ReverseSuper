@@ -40,9 +40,9 @@ import javax.tools.Diagnostic.Kind;
  *
  * 简单示例说明：{@see <a href="http://blog.stablekernel.com/the-10-step-guide-to-annotation-processing-in-android-studio">}
  * 引入{@link <a href="https://github.com/square/javapoet">}
- *
  */
-@AutoService(Processor.class) @SupportedSourceVersion(SourceVersion.RELEASE_7)
+@AutoService(Processor.class)
+@SupportedSourceVersion(SourceVersion.RELEASE_7)
 public class MyProcessor extends AbstractProcessor {
 
   private Filer filer;
@@ -74,18 +74,21 @@ public class MyProcessor extends AbstractProcessor {
     List<TypeSpecPackage> specs = new ArrayList<>();
 
     Set<? extends Element> setModel = roundEnvironment
-        .getElementsAnnotatedWith(ReverseSuper.class);//得到被注解类
+        .getElementsAnnotatedWith(ReverseSuper.class);//得到被注解目标类们
 
-    for (Element elementItem :
-        setModel) {
-      String packName =
-          MoreElements.asPackage(MoreElements.asType(elementItem).getEnclosingElement())
-              .getQualifiedName()
-              .toString();
-      TypeSpec typeSpec = buildByElement(elementItem);
+    //遍历被注解的目标类 获取信息
+    for (Element elementItem : setModel) {
+      //获取包名
+      String packName = MoreElements
+          .asPackage(MoreElements.asType(elementItem).getEnclosingElement())
+          .getQualifiedName()
+          .toString();
+      //构造接口
+      TypeSpec typeSpec = buildByElement(elementItem, packName);
       specs.add(new TypeSpecPackage(packName, typeSpec));
     }
 
+    //依次写反向接口
     for (TypeSpecPackage item : specs) {
       writeToJavaFile(item.packageName, item.typeSpec);
     }
@@ -94,26 +97,19 @@ public class MyProcessor extends AbstractProcessor {
   }
 
   /**
-   * 根据传入的元素 构造
+   * 根据传入的元素 构造接口类
    */
-  private TypeSpec buildByElement(Element element) {
+  private TypeSpec buildByElement(Element element, String packName) {
 
     String interfaceName;
 
-    String assignName = element.getAnnotation(ReverseSuper.class).reverseSuperName();//获取注解指定的接口名称
-    if (CheckUtils.isEmpty(assignName)) {
-      //非指定命名 检查后缀
-      String targetClassName = element.getSimpleName().toString();//获取当前标记类名
-      String suffix = element.getAnnotation(ReverseSuper.class).defaultSuffixName();
-      if (targetClassName.contains(suffix)) {
-        interfaceName = targetClassName.replace(suffix, "");//去掉后缀
-      } else {
-        error(element, "标记的命名不符合规范 应当以%s结尾 或者直接指定生成的接口名", suffix);
-        throw new IllegalArgumentException(targetClassName);
-      }
+    String superName = element.getAnnotation(ReverseSuper.class).superName();//获取注解指定的接口名称
+    if (CheckUtils.isEmpty(superName)) {
+      //没有指定命名 检查后缀 裁剪目标类名
+      interfaceName = getSuperNameByTargetClass(element, packName);
     } else {
       //指定命名 直接使用值
-      interfaceName = assignName;
+      interfaceName = superName;
     }
 
     TypeSpec.Builder classSpecBuild =
@@ -142,14 +138,34 @@ public class MyProcessor extends AbstractProcessor {
       }
 
       //添加接口抽象方法
-      classSpecBuild.addMethod(buildInterface(executableElement));
+      classSpecBuild.addMethod(buildInterfaceMethod(executableElement));
     }
 
     return classSpecBuild.build();
 
   }
 
-  private MethodSpec buildInterface(ExecutableElement executableElement) {
+  private String getSuperNameByTargetClass(Element element, String packName) {
+    String targetClassName = element.getSimpleName().toString();//获取当前标记类名
+    String suffix = element.getAnnotation(ReverseSuper.class).suffixName();
+    int suffixLength = suffix.length();
+    int targetClassNameLength = targetClassName.length();
+
+    if (targetClassNameLength == suffixLength) {
+      error(element, "ReverseSuper 命名不符合规范 %s.%s类名称太短无法得到有效名称", packName, targetClassName);
+      throw new IllegalArgumentException(targetClassName);
+    }
+
+    String targetClassSuffix = targetClassName.substring(targetClassNameLength - suffixLength);
+    if (!targetClassSuffix.equals(suffix)) {
+      error(element, "ReverseSuper 命名不符合规范 %s.%s类应当以%s结尾", packName, targetClassName, suffix);
+      throw new IllegalArgumentException(targetClassName);
+    }
+
+    return targetClassName.substring(0, targetClassNameLength - suffixLength);
+  }
+
+  private MethodSpec buildInterfaceMethod(ExecutableElement executableElement) {
 
     MethodSpec.Builder methodSpecBuild =
         MethodSpec.methodBuilder(executableElement.getSimpleName().toString())
@@ -174,11 +190,7 @@ public class MyProcessor extends AbstractProcessor {
 
     //添加方法参数 注解
     for (VariableElement variableElement : executableElement.getParameters()) {
-      variableElement.getSimpleName();
-
-      ParameterSpec parameterSpec = getParameterSpaceByVariable(variableElement);
-
-      methodSpecBuild.addParameter(parameterSpec);
+      methodSpecBuild.addParameter(getParameterSpaceByVariable(variableElement));
     }
 
     return methodSpecBuild.build();
@@ -197,6 +209,7 @@ public class MyProcessor extends AbstractProcessor {
 
     List<? extends AnnotationMirror> annotationMirrors = element.getAnnotationMirrors();
 
+    //复制参数的注解
     for (AnnotationMirror itemAnnotation : annotationMirrors) {
       builder.addAnnotation(AnnotationSpec.get(itemAnnotation));
     }

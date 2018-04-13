@@ -24,15 +24,16 @@ public @interface ReverseSuper {
 
   /**
    * 指定 生成接口类的名称
-   * 默认为空：裁剪标记类的 {@link #defaultSuffixName}
-   * 指定后缀 生成接口类 如：AddressMangerImpl->AddressManager
+   * 默认为空：裁剪约定后缀的标记类的 {@link #suffixName}
    * 非空输入：生成指定名称的接口 忽略后缀检查
+   * 如：AbstractTranslator->Translatable
    */
-  String reverseSuperName() default "";
+  String superName() default "";
 
   /**
    * 被标注类的名称后缀 默认是命名是 Impl
-   * 可以根据实际修改，指定被标记类的后缀。
+   * 可以根据实际修改，必须是被标记类的后缀。
+   * 默认规则 如：AccountMangerImpl->AccountManager
    */
-  String defaultSuffixName() default Suffix;
+  String suffixName() default Suffix;
 }
