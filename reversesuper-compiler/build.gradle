@@ -8,5 +8,20 @@ dependencies {
     implementation 'com.squareup:javapoet:1.8.0'
 }
 
-sourceCompatibility = "1.7"
-targetCompatibility = "1.7"
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
+
+
+tasks.withType(JavaCompile) { javaOptions ->
+    javaOptions.options.encoding = "UTF-8"
+}
+
+allprojects {
+    tasks.withType(Javadoc) {
+        options.addStringOption('Xdoclint:none', '-quiet')
+        options.addStringOption('encoding', 'UTF-8')
+        options.addStringOption('charSet', 'UTF-8')
+    }
+}
+
+apply from : 'maven.gradle'

@@ -2,7 +2,7 @@ package com.model.licola.reversesuper;
 
 import android.support.annotation.IntRange;
 import android.support.annotation.StringRes;
-import com.model.licola.annotation.ReverseSuper;
+import com.licola.annotation.ReverseSuper;
 
 /**
  * Created by LiCola on 2018/3/15.
@@ -10,7 +10,7 @@ import com.model.licola.annotation.ReverseSuper;
  * 避免需要手动编写，针对项目重构，抽象等，加快开发。
  */
 
-@ReverseSuper
+@ReverseSuper()
 public class AccountManagerImpl implements AccountManager {
 
   private String value = "不会被处理非方法信息-变量";

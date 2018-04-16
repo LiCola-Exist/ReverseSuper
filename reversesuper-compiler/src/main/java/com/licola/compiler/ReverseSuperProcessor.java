@@ -38,12 +38,12 @@ import javax.tools.Diagnostic.Kind;
  *
  * 注解生成代码：生成目录在项目build包下，和目标类同级
  *
- * 简单示例说明：{@see <a href="http://blog.stablekernel.com/the-10-step-guide-to-annotation-processing-in-android-studio">}
+ * 简单示例说明：{@link <a href="http://blog.stablekernel.com/the-10-step-guide-to-annotation-processing-in-android-studio">}
  * 引入{@link <a href="https://github.com/square/javapoet">}
  */
 @AutoService(Processor.class)
 @SupportedSourceVersion(SourceVersion.RELEASE_7)
-public class MyProcessor extends AbstractProcessor {
+public class ReverseSuperProcessor extends AbstractProcessor {
 
   private Filer filer;
 

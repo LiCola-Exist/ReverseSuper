@@ -20,7 +20,6 @@ android {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-
     //项目注解
     implementation project(':reversesuper-annotation')
     //编译工具 annotationProcessor 替换 apt
