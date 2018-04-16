@@ -8,9 +8,9 @@ import com.licola.annotation.ReverseSuper;
  * Created by LiCola on 2018/3/15.
  * 使用示例，主要针对已经存在的类，rebuild后就可生成对应的接口类。
  * 避免需要手动编写，针对项目重构，抽象等，加快开发。
+ * 其中AccountManager接口类是动态生成，它抽象目标类的public方法
  */
-
-@ReverseSuper()
+@ReverseSuper
 public class AccountManagerImpl implements AccountManager {
 
   private String value = "不会被处理非方法信息-变量";

@@ -18,6 +18,13 @@ import java.lang.annotation.Target;
 public @interface ReverseSuper {
 
   /**
+   * 被标注类的名称后缀 默认是命名是 Impl
+   * 可以根据实际修改，必须是被标记类的后缀。
+   * 默认规则 如：AccountMangerImpl->AccountManager
+   */
+  String suffixName() default Suffix;
+
+  /**
    * 默认的接口实现类后缀
    */
   String Suffix = "Impl";
@@ -30,10 +37,5 @@ public @interface ReverseSuper {
    */
   String superName() default "";
 
-  /**
-   * 被标注类的名称后缀 默认是命名是 Impl
-   * 可以根据实际修改，必须是被标记类的后缀。
-   * 默认规则 如：AccountMangerImpl->AccountManager
-   */
-  String suffixName() default Suffix;
+
 }
