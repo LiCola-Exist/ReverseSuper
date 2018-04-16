@@ -1,4 +1,4 @@
-package com.model.licola.compiler;
+package com.licola.compiler;
 
 import java.util.Collection;
 import java.util.Map;

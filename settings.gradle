@@ -1,1 +1,1 @@
-include ':app', ':compiler', ':annotation'
+include ':app', ':reversesuper-compiler', ':reversesuper-annotation'

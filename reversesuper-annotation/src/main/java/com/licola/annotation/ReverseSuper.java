@@ -1,4 +1,4 @@
-package com.model.licola.annotation;
+package com.licola.annotation;
 
 /**
  * Created by LiCola on 2018/3/15.

@@ -1,4 +1,4 @@
-package com.model.licola.compiler;
+package com.licola.compiler;
 
 import com.squareup.javapoet.TypeSpec;
 

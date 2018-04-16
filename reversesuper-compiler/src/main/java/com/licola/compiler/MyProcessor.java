@@ -1,8 +1,8 @@
-package com.model.licola.compiler;
+package com.licola.compiler;
 
 import com.google.auto.common.MoreElements;
 import com.google.auto.service.AutoService;
-import com.model.licola.annotation.ReverseSuper;
+import com.licola.annotation.ReverseSuper;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
