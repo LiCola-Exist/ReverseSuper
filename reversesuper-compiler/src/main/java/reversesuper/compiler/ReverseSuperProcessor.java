@@ -1,8 +1,7 @@
-package com.licola.compiler;
+package reversesuper.compiler;
 
 import com.google.auto.common.MoreElements;
 import com.google.auto.service.AutoService;
-import com.licola.annotation.ReverseSuper;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
@@ -32,6 +31,7 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeKind;
 import javax.tools.Diagnostic.Kind;
+import reversesuper.ReverseSuper;
 
 /**
  * Created by LiCola on 2017/6/21.

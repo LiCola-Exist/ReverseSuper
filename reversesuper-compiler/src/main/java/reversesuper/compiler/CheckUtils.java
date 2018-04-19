@@ -1,4 +1,4 @@
-package com.licola.compiler;
+package reversesuper.compiler;
 
 import java.util.Collection;
 import java.util.Map;

@@ -1,4 +1,4 @@
-package com.licola.annotation;
+package reversesuper;
 
 /**
  * Created by LiCola on 2018/3/15.

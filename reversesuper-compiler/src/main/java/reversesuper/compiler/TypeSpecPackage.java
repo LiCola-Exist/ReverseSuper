@@ -1,4 +1,4 @@
-package com.licola.compiler;
+package reversesuper.compiler;
 
 import com.squareup.javapoet.TypeSpec;
 
