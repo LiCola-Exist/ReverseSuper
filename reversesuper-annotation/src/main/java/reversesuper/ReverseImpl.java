@@ -15,27 +15,23 @@ import java.lang.annotation.Target;
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.CLASS)
-public @interface ReverseSuper {
+public @interface ReverseImpl {
 
   /**
    * 被标注类的名称后缀 默认是命名是 Impl
-   * 可以根据实际修改，必须是被标记类的后缀。
-   * 默认规则 如：AccountMangerImpl->AccountManager
+   * 默认规则 如：AccountMangerImpl(标记类)->AccountManager(生成的接口)
+   * 也可以根据实际实现类的后缀修改。
+   * 严格检查参数：必须是被标记类的后缀。
    */
-  String suffixName() default Suffix;
+  String targetSuffix() default "Impl";
 
   /**
-   * 默认的接口实现类后缀
-   */
-  String Suffix = "Impl";
-
-  /**
-   * 指定 生成接口类的名称
-   * 默认为空：裁剪约定后缀的标记类的 {@link #suffixName}
-   * 非空输入：生成指定名称的接口 忽略后缀检查
+   * 指定 生成接口名称
+   * 默认：默认该字段不作用，通过{@link #targetSuffix}裁剪约定后缀的标记类名称生成接口
+   * 非空输入：指定生成的接口名称，忽略后缀检查
    * 如：AbstractTranslator->Translatable
    */
-  String superName() default "";
+  String interfaceName() default "";
 
 
 }

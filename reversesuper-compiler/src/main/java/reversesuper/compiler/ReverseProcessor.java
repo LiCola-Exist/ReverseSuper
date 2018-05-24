@@ -31,7 +31,8 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeKind;
 import javax.tools.Diagnostic.Kind;
-import reversesuper.ReverseSuper;
+import reversesuper.ReverseExtend;
+import reversesuper.ReverseImpl;
 
 /**
  * Created by LiCola on 2017/6/21.
@@ -43,7 +44,7 @@ import reversesuper.ReverseSuper;
  */
 @AutoService(Processor.class)
 @SupportedSourceVersion(SourceVersion.RELEASE_7)
-public class ReverseSuperProcessor extends AbstractProcessor {
+public class ReverseProcessor extends AbstractProcessor {
 
   private Filer filer;
 
@@ -64,7 +65,7 @@ public class ReverseSuperProcessor extends AbstractProcessor {
 
   private Set<Class<? extends Annotation>> getSupportedAnnotations() {
     Set<Class<? extends Annotation>> annotations = new LinkedHashSet<>();
-    annotations.add(ReverseSuper.class);
+    annotations.add(ReverseImpl.class);
     return annotations;
   }
 
@@ -73,47 +74,86 @@ public class ReverseSuperProcessor extends AbstractProcessor {
 
     List<TypeSpecPackage> specs = new ArrayList<>();
 
-    Set<? extends Element> setModel = roundEnvironment
-        .getElementsAnnotatedWith(ReverseSuper.class);//得到被注解目标类们
+    Set<? extends Element> elementImlpSet = roundEnvironment
+        .getElementsAnnotatedWith(ReverseImpl.class);//得到被注解目标类们
 
     //遍历被注解的目标类 获取信息
-    for (Element elementItem : setModel) {
+    for (Element elementItem : elementImlpSet) {
       //获取包名
       String packName = MoreElements
           .asPackage(MoreElements.asType(elementItem).getEnclosingElement())
           .getQualifiedName()
           .toString();
-      //构造接口
-      TypeSpec typeSpec = buildByElement(elementItem, packName);
+      //构造代码元素
+      TypeSpec typeSpec = buildInterfaceElement(elementItem, packName);
       specs.add(new TypeSpecPackage(packName, typeSpec));
     }
 
-    //依次写反向接口
+    Set<? extends Element> elementSuperSet = roundEnvironment
+        .getElementsAnnotatedWith(ReverseExtend.class);
+    for (Element elementItem : elementSuperSet) {
+      //获取包名
+      String packName = MoreElements
+          .asPackage(MoreElements.asType(elementItem).getEnclosingElement())
+          .getQualifiedName()
+          .toString();
+      TypeSpec typeSpec = buildSuperElement(elementItem, packName);
+      specs.add(new TypeSpecPackage(packName, typeSpec));
+    }
+
+    //依次生成代码
     for (TypeSpecPackage item : specs) {
-      writeToJavaFile(item.packageName, item.typeSpec);
+      writeToJavaFile(item.getPackageName(), item.getTypeSpec());
     }
 
     return true;
   }
 
-  /**
-   * 根据传入的元素 构造接口类
-   */
-  private TypeSpec buildByElement(Element element, String packName) {
+  private TypeSpec buildSuperElement(Element element, String packName) {
+
+    String superName;
+
+    String targetSuperName = element.getAnnotation(ReverseExtend.class).superName();
+    if (CheckUtils.isEmpty(targetSuperName)) {
+      //没有指定命名
+      String superPrefix = element.getAnnotation(ReverseExtend.class).superPrefix();
+      superName = getSuperNameByTarget(element, packName, superPrefix);
+    } else {
+      //指定命名 直接使用
+      superName = targetSuperName;
+    }
+
+    TypeSpec.Builder classSpecBuild = TypeSpec.classBuilder(superName)
+        .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT);
+    return buildByElement(element, classSpecBuild);
+  }
+
+
+  private TypeSpec buildInterfaceElement(Element element, String packName) {
 
     String interfaceName;
 
-    String superName = element.getAnnotation(ReverseSuper.class).superName();//获取注解指定的接口名称
-    if (CheckUtils.isEmpty(superName)) {
+    String targetInterfaceName = element.getAnnotation(ReverseImpl.class)
+        .interfaceName();//获取注解指定的接口名称
+    if (CheckUtils.isEmpty(targetInterfaceName)) {
       //没有指定命名 检查后缀 裁剪目标类名
-      interfaceName = getSuperNameByTargetClass(element, packName);
+      String suffix = element.getAnnotation(ReverseImpl.class).targetSuffix();
+      interfaceName = getInterfaceNameByTarget(element, packName, suffix);
     } else {
       //指定命名 直接使用值
-      interfaceName = superName;
+      interfaceName = targetInterfaceName;
     }
 
     TypeSpec.Builder classSpecBuild =
         TypeSpec.interfaceBuilder(interfaceName).addModifiers(Modifier.PUBLIC);
+
+    return buildByElement(element, classSpecBuild);
+  }
+
+  /**
+   * 根据传入的元素 构造接口类
+   */
+  private TypeSpec buildByElement(Element element, TypeSpec.Builder classSpecBuild) {
 
     //得到类内部全部定义元素（包括 域、静态方法、对象方法等）
     List<? extends Element> elementMethods = MoreElements.asType(element).getEnclosedElements();
@@ -127,8 +167,8 @@ public class ReverseSuperProcessor extends AbstractProcessor {
       ExecutableElement executableElement = MoreElements.asExecutable(elementItem);
       Set<Modifier> modifiers = executableElement.getModifiers();
 
-      if (modifiers.contains(Modifier.STATIC)) {
-        //修饰符中 包含static 即静态方法 跳过
+      if (modifiers.isEmpty()) {
+        //默认修饰符 modifiers表示为空 跳过
         continue;
       }
 
@@ -137,39 +177,83 @@ public class ReverseSuperProcessor extends AbstractProcessor {
         continue;
       }
 
+      if (modifiers.contains(Modifier.STATIC)) {
+        //修饰符中 包含static 即静态方法 跳过
+        continue;
+      }
+
+      if (modifiers.contains(Modifier.ABSTRACT)) {
+        //跳过抽象方法
+        continue;
+      }
+
+      if (modifiers.contains(Modifier.FINAL)) {
+        //跳过final修饰的方法
+        continue;
+      }
+
+      Modifier[] modifierList = new Modifier[2];
+
+      for (Modifier modifier : modifiers) {
+        if (modifier == Modifier.SYNCHRONIZED) {
+          continue;
+        }
+        modifierList[0] = modifier;
+      }
+
+      modifierList[1] = Modifier.ABSTRACT;
+
       //添加接口抽象方法
-      classSpecBuild.addMethod(buildInterfaceMethod(executableElement));
+      classSpecBuild.addMethod(buildInterfaceMethod(executableElement, modifierList));
     }
 
     return classSpecBuild.build();
 
   }
 
-  private String getSuperNameByTargetClass(Element element, String packName) {
+  private String getSuperNameByTarget(Element element, String packName, String superPrefix) {
     String targetClassName = element.getSimpleName().toString();//获取当前标记类名
-    String suffix = element.getAnnotation(ReverseSuper.class).suffixName();
+
+    if (CheckUtils.isEmpty(superPrefix)) {
+      error(element, "@ReverseExtend %s.%s注解的superPrefix值不能为空，否则导致生成同名抽象类", packName,
+          targetClassName);
+      throw new IllegalArgumentException(targetClassName);
+    }
+
+    return superPrefix + targetClassName;
+  }
+
+  private String getInterfaceNameByTarget(Element element, String packName, String suffix) {
+    String targetClassName = element.getSimpleName().toString();//获取当前标记类名
     int suffixLength = suffix.length();
     int targetClassNameLength = targetClassName.length();
 
+    if (CheckUtils.isEmpty(suffix)) {
+      error(element, "@ReverseImpl %s.%s注解的suffix值不能为空，否则导致生成同名接口", packName,
+          targetClassName);
+      throw new IllegalArgumentException(targetClassName);
+    }
+
     if (targetClassNameLength == suffixLength) {
-      error(element, "ReverseSuper 命名不符合规范 %s.%s类名称太短无法得到有效名称", packName, targetClassName);
+      error(element, "@ReverseImpl 命名不符合规范 %s.%s类名称太短无法得到有效名称", packName, targetClassName);
       throw new IllegalArgumentException(targetClassName);
     }
 
     String targetClassSuffix = targetClassName.substring(targetClassNameLength - suffixLength);
     if (!targetClassSuffix.equals(suffix)) {
-      error(element, "ReverseSuper 命名不符合规范 %s.%s类应当以%s结尾", packName, targetClassName, suffix);
+      error(element, "@ReverseImpl 命名不符合规范 %s.%s类应当以%s结尾", packName, targetClassName, suffix);
       throw new IllegalArgumentException(targetClassName);
     }
 
     return targetClassName.substring(0, targetClassNameLength - suffixLength);
   }
 
-  private MethodSpec buildInterfaceMethod(ExecutableElement executableElement) {
+  private MethodSpec buildInterfaceMethod(ExecutableElement executableElement,
+      Modifier[] modifiers) {
 
     MethodSpec.Builder methodSpecBuild =
         MethodSpec.methodBuilder(executableElement.getSimpleName().toString())
-            .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT);
+            .addModifiers(modifiers);
 
     //添加方法返回值的 注解
     for (AnnotationMirror item : executableElement.getAnnotationMirrors()) {

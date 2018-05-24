@@ -1,8 +1,12 @@
 package com.model.licola.reversesuper;
 
+import static java.lang.annotation.RetentionPolicy.CLASS;
+
+import android.support.annotation.IntDef;
 import android.support.annotation.IntRange;
 import android.support.annotation.StringRes;
-import reversesuper.ReverseSuper;
+import java.lang.annotation.Retention;
+import reversesuper.ReverseImpl;
 
 /**
  * Created by LiCola on 2018/3/15.
@@ -10,23 +14,47 @@ import reversesuper.ReverseSuper;
  * 避免需要手动编写，针对项目重构，抽象等，加快开发。
  * 其中AccountManager接口类是动态生成，它抽象目标类的public方法
  */
-@ReverseSuper
+@ReverseImpl
 public class AccountManagerImpl implements AccountManager {
 
   private String value = "不会被处理非方法信息-变量";
+
+  public static final int TYPE_A = 0x1;
+  public static final int TYPE_B = 0x2;
+
+
+  @IntDef({TYPE_A, TYPE_B})
+  @Retention(CLASS)
+  public @interface Type {
+
+  }
 
   private void privateMethod() {
     //不会被反向生成的私有方法
   }
 
+  /**
+   * 被反向生成抽象方法的 目标方法
+   *
+   * @param input 输入值
+   * @return 固定返回
+   */
   @Override
   public String reverseMethod(String input) {
     return "被反向生成抽象方法的 目标方法";
   }
 
+  /**
+   * 被反向生成抽象方法的 目标方法-带参数注解
+   *
+   * @param integer 带注解的输入范围
+   * @param type 带注解的固定数据
+   * @return 固定返回值
+   */
   @Override
-  public void reversMethod(@IntRange(from = 0, to = 10) Integer integer) {
+  public String reversMethod(@IntRange(from = 0, to = 10) Integer integer, @Type int type) {
     //展示 方法参数注解 反向生成的能力
+    return "被反向生成抽象方法的 目标方法-带参数注解";
   }
 
   @Override
