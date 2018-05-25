@@ -7,6 +7,8 @@ import java.lang.annotation.Target;
 
 /**
  * Created by LiCola on 2018/5/24.
+ * 反向生成高层抽象类注解
+ * 被标记的类在编译时，会在build目录下的同级包 生成抽象类
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.CLASS)
@@ -28,6 +30,5 @@ public @interface ReverseExtend {
    * 如：传入BaseAdapter, MyAdapter(标记类)->BaseAdapter(生成的抽象类)
    */
   String superName() default "";
-
 
 }

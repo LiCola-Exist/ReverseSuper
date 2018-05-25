@@ -10,7 +10,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 反向生成父类接口类注释
+ * 反向生成高层接口类注解
  * 被标记的类在编译时，会在build目录下的同级包 生成接口类
  */
 @Target(ElementType.TYPE)
