@@ -14,11 +14,11 @@ public class MainActivity extends AppCompatActivity {
     AccountManager impl = new AccountManagerImpl();
 
     Log.d("MainActivity", impl.reverseMethod("调用方法"));
-    Log.d("MainActivity", impl.reversMethod(10, AccountManagerImpl.TYPE_A));
+    Log.d("MainActivity", impl.reversMethod(10));
 
     BaseAdapter adapter = new Adapter();
 
     Log.d("MainActivity", adapter.reverseMethod("调用方法"));
-    Log.d("MainActivity", adapter.reversMethod(10, AccountManagerImpl.TYPE_A));
+    Log.d("MainActivity", adapter.reversMethod(10, Adapter.TYPE_A));
   }
 }

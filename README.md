@@ -19,28 +19,12 @@
 ```java
 /**
  * Created by LiCola on 2018/3/15.
- * 使用示例，主要针对已经存在的类，Rebuild后就可生成对应的接口类。
+ * 使用示例，主要针对已经存在的类，rebuild后就可生成对应的接口类。
  * 避免需要手动编写，针对项目重构，抽象等，加快开发。
- * 其中 AccountManager 接口类是动态生成，它抽象目标类的public方法
+ * 其中AccountManager接口类是动态生成，它抽象目标类的public方法
  */
 @ReverseImpl
 public class AccountManagerImpl implements AccountManager {
-
-  private String value = "不会被处理非方法信息-变量";
-
-  public static final int TYPE_A = 0x1;
-  public static final int TYPE_B = 0x2;
-
-
-  @IntDef({TYPE_A, TYPE_B})
-  @Retention(CLASS)
-  public @interface Type {
-
-  }
-
-  private void privateMethod() {
-    //不会被反向生成的私有方法
-  }
 
   /**
    * 被反向生成抽象方法的 目标方法
@@ -57,11 +41,10 @@ public class AccountManagerImpl implements AccountManager {
    * 被反向生成抽象方法的 目标方法-带参数注解
    *
    * @param integer 带注解的输入范围
-   * @param type 带注解的固定数据
    * @return 固定返回值
    */
   @Override
-  public String reversMethod(@IntRange(from = 0, to = 10) Integer integer, @Type int type) {
+  public String reversMethod(@IntRange(from = 0, to = 10) Integer integer) {
     //展示 方法参数注解 反向生成的能力
     return "被反向生成抽象方法的 目标方法-带参数注解";
   }
@@ -73,6 +56,11 @@ public class AccountManagerImpl implements AccountManager {
     return android.R.string.ok;
   }
 
+  private String value = "不会被处理非方法信息 变量";
+
+  private void privateMethod() {
+    //不会被反向生成的私有方法
+  }
 
 }
 ```
@@ -87,8 +75,11 @@ public class AccountManagerImpl implements AccountManager {
 
 # 项目背景
 在项目重构时，面对一些之前因为某些原因没有抽象的模块代码，直接实现功能而没有抽象出接口，直接对外暴露实现类。
+
 当需要把实现类抽象成接口，对外暴露接口，从而实现对接口的mock操作或者装饰者模式添加功能时或者其他操作。
-抽象实现类成接口是我们的目标，一般少量的代码手动就可以完成，但是面对大量的实现类需要抽象出接口，这个工作量就是巨大的。
+
+抽象实现类成接口是我们的目标，一般少量的代码手动就可以完成，但是面对大量的实现类需要抽象出接口,这个工作量就是巨大的。
+
 面对巨大且简单重复的工作，首先我们考虑的就是机器代替实现自动化，自动生成代码。而且重构是一个动态的过程，还需要一定的灵活性，因为实现类的函数名和参数都可能变化。
 
 # 项目实现原理
@@ -96,11 +87,15 @@ public class AccountManagerImpl implements AccountManager {
 * 自动生成代码
 * 还要灵活性，不只一次生成。
 
-然后就想到，Java提供注解处理器，在项目编译前期，注解器有机会处理代码。利用这个处理器，我们可以实现对现有目标类的扫描，然后根据扫描得到的方法信息，利用工具生成java文件。
+这就联想到Java提供注解处理器，在项目编译前期，注解器有机会处理代码。利用这个处理器，我们可以实现对现有目标类的扫描，然后根据扫描得到的方法信息，利用工具生成java文件。
+
 同时注解处理器的处理过程发生在每次项目编译前期，能够提供灵活性，只要修改实现类再一次编译就会生成新的动态代码。
 
-> 关于注解的命名Reverse反向，一般的写代码是从接口（上层）->实现类（下层）。
-但是抽象重构时面对实现类（下层），反而生成接口类（高层），所以就是Reverse反向。
+> 关于注解的命名Reverse反向:
+>
+> 一般的写代码是从接口（上层）->实现类（下层）。
+>
+> 抽象重构时面对实现类（下层），反而生成接口类（高层），所以就是Reverse反向。
 
 
 # 说明
@@ -109,8 +104,10 @@ public class AccountManagerImpl implements AccountManager {
 
 参照阿里巴巴Java开发手册-编程规约-命名风格。
 > 14.接口和实现类的命名规则：
+>
 >【强制】对于 Service 和 DAO 类，基于 SOA 的理念，暴露出来的服务一定是接口，内部的实现类用 Impl 的后缀与接口区别。
-正例： CacheServiceImpl 实现 CacheService 接口
+> 正例： CacheServiceImpl 实现 CacheService 接口
+
 >【推荐】如果是形容能力的接口名称，取对应的形容词做接口名 （ 通常是–able 的形式）。
 正例： AbstractTranslator 实现 Translatable。
 
@@ -123,7 +120,6 @@ public class AccountManagerImpl implements AccountManager {
  @Target(ElementType.TYPE)
  @Retention(RetentionPolicy.CLASS)
  public @interface ReverseImpl {
- 
    /**
     * 被标注类的名称后缀 默认是命名是 Impl
     * 默认规则 如：AccountMangerImpl(标记类)->AccountManager(生成的接口)
@@ -131,7 +127,7 @@ public class AccountManagerImpl implements AccountManager {
     * 严格检查参数：必须是被标记类的后缀。
     */
    String targetSuffix() default "Impl";
- 
+
    /**
     * 指定 生成接口名称
     * 默认：默认该字段不作用，通过{@link #targetSuffix}裁剪约定后缀的标记类名称生成接口
@@ -139,13 +135,11 @@ public class AccountManagerImpl implements AccountManager {
     * 如：AbstractTranslator->Translatable
     */
    String interfaceName() default "";
- 
- 
  }
 
 ```
 
-> 6.【强制】抽象命名使用Abstract或Base开头 
+> 6.【强制】抽象命名使用Abstract或Base开头
 
 这里也是两套规则，对应`@ReverseExtend`注解，其中默认实现`Abstract`开头命名风格
 ```java
@@ -174,7 +168,7 @@ public @interface ReverseExtend {
    * 如：传入BaseAdapter, MyAdapter(标记类)->BaseAdapter(生成的抽象类)
    */
   String superName() default "";
-  
+
 }
 ```
 
@@ -186,10 +180,13 @@ public @interface ReverseExtend {
 
 重构是一个渐进的过程，从最初的实现类反向生成接口类。接口类可能会修改。动态的反向可以带来便利。只要添加/修改实现类方法参数/返回值以及它们的注解，rebuild就会马上生成接口。一次修改（否则就要修改接口类和实现类的方法，两次修改）。
 
-当重构完成或者更高层抽象分离出来（比如动态代理，直接抽象方法内部实现逻辑），我们的高层类最终确定，就不需要build项目时动态生成反向接口类，每次build动态生成反而可能拖慢了项目的编译时间。这时就可以从动态文件包app-build-generated-sourceapt中复制出接口类放到适合的包。从而弃用`@ReverseImpl`/`@ReverseExtend`注解。完成它辅助重构的使命。
+当重构完成或者更高层抽象分离出来（比如动态代理，直接抽象方法内部实现逻辑），我们的高层类最终确定，就不需要build项目时动态生成反向接口类。
+
+每次build动态生成反而可能拖慢了项目的编译时间。这时就可以从动态文件包app-build-generated-sourceapt中复制出接口类放到适合的包。从而弃用`@ReverseImpl`/`@ReverseExtend`注解。完成它辅助重构的使命。
 
 # 项目灵感
 源自大名鼎鼎的[butterknife](https://github.com/JakeWharton/butterknife/tree/master/butterknife-compiler)对注解处理器的应用。
 
-
-
+# future
+其实按照这个思路，可以解决`MVP`架构中`V/P`两层接口方法太多时带来的麻烦。
+只要我们的思路清晰而且是以一个人分工负责一个`V/P`对应模块，可以先写P层业务代码，然后一键生成抽象接口暴露public方法，提供给V层使用。而且每次P层方法新增/修改参数都动态生成，避免两次修改的麻烦。

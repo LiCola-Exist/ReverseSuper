@@ -1,7 +1,10 @@
 package com.model.licola.reversesuper;
 
+import static java.lang.annotation.RetentionPolicy.CLASS;
+
+import android.support.annotation.IntDef;
 import android.support.annotation.IntRange;
-import com.model.licola.reversesuper.AccountManagerImpl.Type;
+import java.lang.annotation.Retention;
 import reversesuper.ReverseExtend;
 
 /**
@@ -9,6 +12,15 @@ import reversesuper.ReverseExtend;
  */
 @ReverseExtend(superName = "BaseAdapter")
 public class Adapter extends BaseAdapter {
+
+  public static final int TYPE_A = 0x1;
+  public static final int TYPE_B = 0x2;
+
+  @IntDef({TYPE_A, TYPE_B})
+  @Retention(CLASS)
+  public @interface Type {
+
+  }
 
   /**
    * 被反向生成抽象方法的 目标方法
@@ -50,7 +62,7 @@ public class Adapter extends BaseAdapter {
   }
 
   /**
-   * 默认修饰的方法 不会被反向
+   * 默认访问修饰的方法 不会被反向
    */
   int getView() {
     return 0;

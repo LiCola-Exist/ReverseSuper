@@ -1,11 +1,7 @@
 package com.model.licola.reversesuper;
 
-import static java.lang.annotation.RetentionPolicy.CLASS;
-
-import android.support.annotation.IntDef;
 import android.support.annotation.IntRange;
 import android.support.annotation.StringRes;
-import java.lang.annotation.Retention;
 import reversesuper.ReverseImpl;
 
 /**
@@ -16,22 +12,6 @@ import reversesuper.ReverseImpl;
  */
 @ReverseImpl
 public class AccountManagerImpl implements AccountManager {
-
-  private String value = "不会被处理非方法信息-变量";
-
-  public static final int TYPE_A = 0x1;
-  public static final int TYPE_B = 0x2;
-
-
-  @IntDef({TYPE_A, TYPE_B})
-  @Retention(CLASS)
-  public @interface Type {
-
-  }
-
-  private void privateMethod() {
-    //不会被反向生成的私有方法
-  }
 
   /**
    * 被反向生成抽象方法的 目标方法
@@ -48,11 +28,10 @@ public class AccountManagerImpl implements AccountManager {
    * 被反向生成抽象方法的 目标方法-带参数注解
    *
    * @param integer 带注解的输入范围
-   * @param type 带注解的固定数据
    * @return 固定返回值
    */
   @Override
-  public String reversMethod(@IntRange(from = 0, to = 10) Integer integer, @Type int type) {
+  public String reversMethod(@IntRange(from = 0, to = 10) Integer integer) {
     //展示 方法参数注解 反向生成的能力
     return "被反向生成抽象方法的 目标方法-带参数注解";
   }
@@ -64,5 +43,10 @@ public class AccountManagerImpl implements AccountManager {
     return android.R.string.ok;
   }
 
+  private String value = "不会被处理非方法信息 变量";
+
+  private void privateMethod() {
+    //不会被反向生成的私有方法
+  }
 
 }
