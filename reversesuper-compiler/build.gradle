@@ -6,6 +6,9 @@ dependencies {
     implementation project(':reversesuper-annotation')
     implementation 'com.google.auto.service:auto-service:1.0-rc3'
     implementation 'com.squareup:javapoet:1.8.0'
+    //log日志工具
+    implementation "com.licola:llogger:1.4.0"
+    implementation "org.json:json:20180130"
 }
 
 sourceCompatibility = JavaVersion.VERSION_1_8

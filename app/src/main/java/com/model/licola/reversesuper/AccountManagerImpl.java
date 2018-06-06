@@ -2,6 +2,7 @@ package com.model.licola.reversesuper;
 
 import android.support.annotation.IntRange;
 import android.support.annotation.StringRes;
+import reversesuper.ReverseExtend;
 import reversesuper.ReverseImpl;
 
 /**

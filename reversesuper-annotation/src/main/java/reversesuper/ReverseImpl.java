@@ -14,7 +14,7 @@ import java.lang.annotation.Target;
  * 被标记的类在编译时，会在build目录下的同级包 生成接口类
  */
 @Target(ElementType.TYPE)
-@Retention(RetentionPolicy.CLASS)
+@Retention(RetentionPolicy.RUNTIME)
 public @interface ReverseImpl {
 
   /**

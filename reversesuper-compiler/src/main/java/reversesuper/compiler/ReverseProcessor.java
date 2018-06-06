@@ -14,6 +14,7 @@ import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Filer;
@@ -66,6 +67,7 @@ public class ReverseProcessor extends AbstractProcessor {
   private Set<Class<? extends Annotation>> getSupportedAnnotations() {
     Set<Class<? extends Annotation>> annotations = new LinkedHashSet<>();
     annotations.add(ReverseImpl.class);
+    annotations.add(ReverseExtend.class);
     return annotations;
   }
 
@@ -74,11 +76,16 @@ public class ReverseProcessor extends AbstractProcessor {
 
     List<TypeSpecPackage> specs = new ArrayList<>();
 
-    Set<? extends Element> elementImlpSet = roundEnvironment
+    Set<? extends Element> elementImplSet = roundEnvironment
         .getElementsAnnotatedWith(ReverseImpl.class);//得到被注解目标类们
 
+    Set<? extends Element> elementSuperSet = roundEnvironment
+        .getElementsAnnotatedWith(ReverseExtend.class);
+
+    checkOverlap(elementImplSet, elementSuperSet);
+
     //遍历被注解的目标类 获取信息
-    for (Element elementItem : elementImlpSet) {
+    for (Element elementItem : elementImplSet) {
       //获取包名
       String packName = MoreElements
           .asPackage(MoreElements.asType(elementItem).getEnclosingElement())
@@ -89,8 +96,6 @@ public class ReverseProcessor extends AbstractProcessor {
       specs.add(new TypeSpecPackage(packName, typeSpec));
     }
 
-    Set<? extends Element> elementSuperSet = roundEnvironment
-        .getElementsAnnotatedWith(ReverseExtend.class);
     for (Element elementItem : elementSuperSet) {
       //获取包名
       String packName = MoreElements
@@ -107,6 +112,23 @@ public class ReverseProcessor extends AbstractProcessor {
     }
 
     return true;
+  }
+
+  private void checkOverlap(Set<? extends Element> elementImplSet,
+      Set<? extends Element> elementSuperSet) {
+    List<Element> overlapElement = new ArrayList<>();
+    for (Element element : elementSuperSet) {
+      if (elementImplSet.contains(element)) {
+        overlapElement.add(element);
+      }
+    }
+
+    if (!CheckUtils.isEmpty(overlapElement)) {
+      for (Element element : overlapElement) {
+        error(element, "%s类不能同时被@ReverseImpl和@ReverseExtend注解", element.getSimpleName().toString());
+      }
+      throw new IllegalArgumentException(String.format(Locale.CHINA,"存在%d个类被@ReverseImpl和@ReverseExtend重复注解",overlapElement.size()));
+    }
   }
 
   private TypeSpec buildSuperElement(Element element, String packName) {
@@ -196,6 +218,7 @@ public class ReverseProcessor extends AbstractProcessor {
 
       for (Modifier modifier : modifiers) {
         if (modifier == Modifier.SYNCHRONIZED) {
+          //跳过synchronized 修饰符
           continue;
         }
         modifierList[0] = modifier;

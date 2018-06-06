@@ -22,8 +22,13 @@ dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     //项目注解
     implementation project(':reversesuper-annotation')
-    //编译工具 annotationProcessor 替换 apt
+    //代码注解工具
     annotationProcessor project(':reversesuper-compiler')
+    //代码生成工具
+    implementation project(':reversesuper-generator')
+
+    //log日志工具
+    implementation "com.licola:llogger:1.4.0"
 
     implementation 'com.android.support:appcompat-v7:26.1.0'
     implementation 'com.android.support.constraint:constraint-layout:1.0.2'

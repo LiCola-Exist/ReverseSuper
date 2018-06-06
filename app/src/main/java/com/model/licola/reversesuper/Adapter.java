@@ -6,12 +6,13 @@ import android.support.annotation.IntDef;
 import android.support.annotation.IntRange;
 import java.lang.annotation.Retention;
 import reversesuper.ReverseExtend;
+import reversesuper.ReverseImpl;
 
 /**
  * Created by LiCola on 2018/5/24.
  */
 @ReverseExtend(superName = "BaseAdapter")
-public class Adapter extends BaseAdapter {
+public class Adapter extends BaseAdapter{
 
   public static final int TYPE_A = 0x1;
   public static final int TYPE_B = 0x2;
