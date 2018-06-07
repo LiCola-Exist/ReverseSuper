@@ -7,11 +7,12 @@ import android.support.annotation.IntRange;
 import java.lang.annotation.Retention;
 import reversesuper.ReverseExtend;
 import reversesuper.ReverseImpl;
+import reversesuper.ReverseOutMode;
 
 /**
  * Created by LiCola on 2018/5/24.
  */
-@ReverseExtend(superName = "BaseAdapter")
+@ReverseExtend(superName = "BaseAdapter",mode = ReverseOutMode.SRC)
 public class Adapter extends BaseAdapter{
 
   public static final int TYPE_A = 0x1;

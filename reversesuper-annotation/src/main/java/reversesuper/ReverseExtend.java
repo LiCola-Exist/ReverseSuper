@@ -31,4 +31,11 @@ public @interface ReverseExtend {
    */
   String superName() default "";
 
+
+  /**
+   * 指定代码输出模式 默认build模式
+   * @return
+   */
+  ReverseOutMode mode() default ReverseOutMode.Build;
+
 }

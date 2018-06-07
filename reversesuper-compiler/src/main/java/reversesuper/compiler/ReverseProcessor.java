@@ -1,15 +1,18 @@
 package reversesuper.compiler;
 
+import static reversesuper.compiler.Utils.checkExistReverse;
+import static reversesuper.compiler.Utils.getPackageElement;
+import static reversesuper.compiler.Utils.writeToJavaFile;
+
 import com.google.auto.common.MoreElements;
 import com.google.auto.service.AutoService;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
-import java.io.IOException;
+import java.io.File;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -28,12 +31,14 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
+import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeKind;
 import javax.tools.Diagnostic.Kind;
 import reversesuper.ReverseExtend;
 import reversesuper.ReverseImpl;
+import reversesuper.ReverseOutMode;
 
 /**
  * Created by LiCola on 2017/6/21.
@@ -44,15 +49,19 @@ import reversesuper.ReverseImpl;
  * 引入{@link <a href="https://github.com/square/javapoet">}
  */
 @AutoService(Processor.class)
-@SupportedSourceVersion(SourceVersion.RELEASE_7)
+@SupportedSourceVersion(SourceVersion.RELEASE_8)
 public class ReverseProcessor extends AbstractProcessor {
 
-  private Filer filer;
+  private static final String DEFAULT_SRC_PATH = "./app/src/main/java";
+
+  private Filer writeFiler;
+  private File writeFile = new File(DEFAULT_SRC_PATH);
+
 
   @Override
   public synchronized void init(ProcessingEnvironment processingEnvironment) {
     super.init(processingEnvironment);
-    filer = processingEnv.getFiler();
+    writeFiler = processingEnv.getFiler();
   }
 
   @Override
@@ -74,45 +83,71 @@ public class ReverseProcessor extends AbstractProcessor {
   @Override
   public boolean process(Set<? extends TypeElement> set, RoundEnvironment roundEnvironment) {
 
-    List<TypeSpecPackage> specs = new ArrayList<>();
-
     Set<? extends Element> elementImplSet = roundEnvironment
         .getElementsAnnotatedWith(ReverseImpl.class);//得到被注解目标类们
 
     Set<? extends Element> elementSuperSet = roundEnvironment
-        .getElementsAnnotatedWith(ReverseExtend.class);
+        .getElementsAnnotatedWith(ReverseExtend.class);//得到被注解目标类们
 
+    //检查重复注解
     checkOverlap(elementImplSet, elementSuperSet);
 
-    //遍历被注解的目标类 获取信息
+    List<TypeSpecPackage> specs = new ArrayList<>();
+
+    //构造接口代码 遍历被注解的目标类 获取信息
     for (Element elementItem : elementImplSet) {
-      //获取包名
-      String packName = MoreElements
-          .asPackage(MoreElements.asType(elementItem).getEnclosingElement())
-          .getQualifiedName()
-          .toString();
-      //构造代码元素
-      TypeSpec typeSpec = buildInterfaceElement(elementItem, packName);
-      specs.add(new TypeSpecPackage(packName, typeSpec));
+
+      ReverseOutMode mode = elementItem.getAnnotation(ReverseImpl.class).mode();
+      PackageElement packageElement = getPackageElement(elementItem);
+      TypeSpec typeSpec = buildInterface(elementItem, packageElement, mode);
+
+      if (typeSpec == null) {
+        continue;
+      }
+
+      TypeSpecPackage typeSpecPackage = null;
+      if (mode == ReverseOutMode.Build) {
+        typeSpecPackage = TypeSpecPackage.createByBuild(packageElement, typeSpec, writeFiler);
+      } else if (mode == ReverseOutMode.SRC) {
+        typeSpecPackage = TypeSpecPackage.createBySrc(packageElement, typeSpec, writeFile);
+      }
+
+      if (typeSpecPackage != null) {
+        specs.add(typeSpecPackage);
+      }
     }
 
+    //构造抽象类代码
     for (Element elementItem : elementSuperSet) {
-      //获取包名
-      String packName = MoreElements
-          .asPackage(MoreElements.asType(elementItem).getEnclosingElement())
-          .getQualifiedName()
-          .toString();
-      TypeSpec typeSpec = buildSuperElement(elementItem, packName);
-      specs.add(new TypeSpecPackage(packName, typeSpec));
+
+      ReverseOutMode mode = elementItem.getAnnotation(ReverseExtend.class).mode();
+      PackageElement packageElement = getPackageElement(elementItem);
+      TypeSpec typeSpec = buildSuper(elementItem, packageElement, mode);
+
+      if (typeSpec == null) {
+        continue;
+      }
+
+      TypeSpecPackage typeSpecPackage = null;
+      if (mode == ReverseOutMode.Build) {
+        typeSpecPackage = TypeSpecPackage.createByBuild(packageElement, typeSpec, writeFiler);
+      } else if (mode == ReverseOutMode.SRC) {
+        typeSpecPackage = TypeSpecPackage.createBySrc(packageElement, typeSpec, writeFile);
+      }
+
+      if (typeSpecPackage != null) {
+        specs.add(typeSpecPackage);
+      }
     }
 
     //依次生成代码
     for (TypeSpecPackage item : specs) {
-      writeToJavaFile(item.getPackageName(), item.getTypeSpec());
+      writeToJavaFile(item);
     }
 
     return true;
   }
+
 
   private void checkOverlap(Set<? extends Element> elementImplSet,
       Set<? extends Element> elementSuperSet) {
@@ -127,49 +162,125 @@ public class ReverseProcessor extends AbstractProcessor {
       for (Element element : overlapElement) {
         error(element, "%s类不能同时被@ReverseImpl和@ReverseExtend注解", element.getSimpleName().toString());
       }
-      throw new IllegalArgumentException(String.format(Locale.CHINA,"存在%d个类被@ReverseImpl和@ReverseExtend重复注解",overlapElement.size()));
+      throw new IllegalArgumentException(String
+          .format(Locale.CHINA, "存在%d个类被@ReverseImpl和@ReverseExtend重复注解", overlapElement.size()));
     }
   }
 
-  private TypeSpec buildSuperElement(Element element, String packName) {
+  private TypeSpec buildSuper(Element element, PackageElement packageElement,
+      ReverseOutMode mode) {
 
-    String superName;
-
-    String targetSuperName = element.getAnnotation(ReverseExtend.class).superName();
-    if (CheckUtils.isEmpty(targetSuperName)) {
-      //没有指定命名
-      String superPrefix = element.getAnnotation(ReverseExtend.class).superPrefix();
-      superName = getSuperNameByTarget(element, packName, superPrefix);
-    } else {
-      //指定命名 直接使用
-      superName = targetSuperName;
-    }
+    String superName = getSuperNameByTarget(element);
 
     TypeSpec.Builder classSpecBuild = TypeSpec.classBuilder(superName)
-        .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT);
+        .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
+        .addJavadoc("Created by $L on $L \n", ReverseExtend.class.getSimpleName(),
+            Utils.getNowTime())
+        .addJavadoc("该抽象类由{@link $L}类自动生成\n", element.getSimpleName().toString());
+
+    if (mode == ReverseOutMode.SRC) {
+      //src模式 检查同名src包下是否存在 目标类
+      if (checkExistReverse(packageElement, superName)) {
+        return null;
+      }
+      classSpecBuild
+          .addJavadoc("注：同名包下，存在$L就不会再次生成代码\n", superName);
+    } else if (mode == ReverseOutMode.Build) {
+      classSpecBuild
+          .addJavadoc("注：每次Rebuild都会重新生成代码\n");
+    } else {
+      return null;
+    }
+
+    return buildByElement(element, classSpecBuild);
+  }
+
+  private TypeSpec buildInterface(Element element, PackageElement packageElement,
+      ReverseOutMode mode) {
+
+    String interfaceName = getInterfaceNameByTarget(element);
+
+    TypeSpec.Builder classSpecBuild =
+        TypeSpec.interfaceBuilder(interfaceName)
+            .addModifiers(Modifier.PUBLIC)
+            .addJavadoc("Created by $L on $L \n", ReverseImpl.class.getSimpleName(),
+                Utils.getNowTime())
+            .addJavadoc("该接口由{@link $L}类自动生成\n", element.getSimpleName().toString());
+
+    if (mode == ReverseOutMode.SRC) {
+      //src模式 检查同名src包下是否存在 目标类
+      if (checkExistReverse(packageElement, interfaceName)) {
+        return null;
+      }
+      classSpecBuild
+          .addJavadoc("注：同名包下，存在$L就不会再次生成代码\n", interfaceName);
+    } else if (mode == ReverseOutMode.Build) {
+      //build模式 每次都生成代码
+      classSpecBuild
+          .addJavadoc("注：每次Rebuild都会重新生成代码\n");
+    } else {
+      return null;
+    }
+
     return buildByElement(element, classSpecBuild);
   }
 
 
-  private TypeSpec buildInterfaceElement(Element element, String packName) {
-
-    String interfaceName;
+  private String getInterfaceNameByTarget(Element element) {
 
     String targetInterfaceName = element.getAnnotation(ReverseImpl.class)
         .interfaceName();//获取注解指定的接口名称
-    if (CheckUtils.isEmpty(targetInterfaceName)) {
-      //没有指定命名 检查后缀 裁剪目标类名
-      String suffix = element.getAnnotation(ReverseImpl.class).targetSuffix();
-      interfaceName = getInterfaceNameByTarget(element, packName, suffix);
-    } else {
+
+    if (!CheckUtils.isEmpty(targetInterfaceName)) {
       //指定命名 直接使用值
-      interfaceName = targetInterfaceName;
+      return targetInterfaceName;
     }
 
-    TypeSpec.Builder classSpecBuild =
-        TypeSpec.interfaceBuilder(interfaceName).addModifiers(Modifier.PUBLIC);
+    String suffix = element.getAnnotation(ReverseImpl.class).targetSuffix();
 
-    return buildByElement(element, classSpecBuild);
+    String targetClassName = element.getSimpleName().toString();//获取当前标记类名
+    int suffixLength = suffix.length();
+    int targetClassNameLength = targetClassName.length();
+
+    if (CheckUtils.isEmpty(suffix)) {
+      error(element, "@ReverseImpl %s注解的suffix后缀值不能为空，否则导致生成同名接口",
+          targetClassName);
+      throw new IllegalArgumentException(targetClassName);
+    }
+
+    if (targetClassNameLength == suffixLength) {
+      error(element, "@ReverseImpl 命名不符合规范 %s类名称太短无法得到有效名称", targetClassName);
+      throw new IllegalArgumentException(targetClassName);
+    }
+
+    String targetClassSuffix = targetClassName.substring(targetClassNameLength - suffixLength);
+    if (!targetClassSuffix.equals(suffix)) {
+      error(element, "@ReverseImpl 命名不符合规范 %s类应当以%s结尾", targetClassName, suffix);
+      throw new IllegalArgumentException(targetClassName);
+    }
+
+    return targetClassName.substring(0, targetClassNameLength - suffixLength);
+  }
+
+
+  private String getSuperNameByTarget(Element element) {
+
+    String targetSuperName = element.getAnnotation(ReverseExtend.class).superName();
+
+    if (!CheckUtils.isEmpty(targetSuperName)) {
+      return targetSuperName;
+    }
+
+    String targetClassName = element.getSimpleName().toString();//获取当前标记类名
+    String superPrefix = element.getAnnotation(ReverseExtend.class).superPrefix();
+
+    if (CheckUtils.isEmpty(superPrefix)) {
+      error(element, "@ReverseExtend %s注解的superPrefix值不能为空，否则导致生成同名抽象类",
+          targetClassName);
+      throw new IllegalArgumentException(targetClassName);
+    }
+
+    return superPrefix + targetClassName;
   }
 
   /**
@@ -234,43 +345,6 @@ public class ReverseProcessor extends AbstractProcessor {
 
   }
 
-  private String getSuperNameByTarget(Element element, String packName, String superPrefix) {
-    String targetClassName = element.getSimpleName().toString();//获取当前标记类名
-
-    if (CheckUtils.isEmpty(superPrefix)) {
-      error(element, "@ReverseExtend %s.%s注解的superPrefix值不能为空，否则导致生成同名抽象类", packName,
-          targetClassName);
-      throw new IllegalArgumentException(targetClassName);
-    }
-
-    return superPrefix + targetClassName;
-  }
-
-  private String getInterfaceNameByTarget(Element element, String packName, String suffix) {
-    String targetClassName = element.getSimpleName().toString();//获取当前标记类名
-    int suffixLength = suffix.length();
-    int targetClassNameLength = targetClassName.length();
-
-    if (CheckUtils.isEmpty(suffix)) {
-      error(element, "@ReverseImpl %s.%s注解的suffix值不能为空，否则导致生成同名接口", packName,
-          targetClassName);
-      throw new IllegalArgumentException(targetClassName);
-    }
-
-    if (targetClassNameLength == suffixLength) {
-      error(element, "@ReverseImpl 命名不符合规范 %s.%s类名称太短无法得到有效名称", packName, targetClassName);
-      throw new IllegalArgumentException(targetClassName);
-    }
-
-    String targetClassSuffix = targetClassName.substring(targetClassNameLength - suffixLength);
-    if (!targetClassSuffix.equals(suffix)) {
-      error(element, "@ReverseImpl 命名不符合规范 %s.%s类应当以%s结尾", packName, targetClassName, suffix);
-      throw new IllegalArgumentException(targetClassName);
-    }
-
-    return targetClassName.substring(0, targetClassNameLength - suffixLength);
-  }
-
   private MethodSpec buildInterfaceMethod(ExecutableElement executableElement,
       Modifier[] modifiers) {
 
@@ -332,19 +406,8 @@ public class ReverseProcessor extends AbstractProcessor {
     if (args.length > 0) {
       message = String.format(message, args);
     }
-
     processingEnv.getMessager().printMessage(kind, message, element);
   }
 
-  private void writeToJavaFile(String packageName, TypeSpec typeSpec) {
-    if (typeSpec == null) {
-      return;
-    }
-    JavaFile javaFile = JavaFile.builder(packageName, typeSpec).build();
-    try {
-      javaFile.writeTo(filer);
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-  }
+
 }

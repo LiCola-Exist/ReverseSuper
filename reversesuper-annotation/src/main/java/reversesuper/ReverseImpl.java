@@ -34,4 +34,10 @@ public @interface ReverseImpl {
   String interfaceName() default "";
 
 
+  /**
+   * 指定代码输出模式 默认build模式
+   * @return
+   */
+  ReverseOutMode mode() default ReverseOutMode.Build;
+
 }
