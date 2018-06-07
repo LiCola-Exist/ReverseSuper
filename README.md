@@ -6,6 +6,12 @@
 # 作用
 一键生成动态代码，支持生成接口/抽象类
 
+# 更新
+
+- 1.2.1：完善检查逻辑
+- 1.2.2：新增代码输出模式，可以指定代码生成到src目录，避免每次生成
+
+
 # 引用
 
 ```java
@@ -174,15 +180,25 @@ public @interface ReverseExtend {
 
 
 ## 关于生成的java文件
-当Rebuild项目时，会在app-build-generated-sourceapt文件下，生成目标类的同名包以及动态生成的高层类。最终在apk打包过程中源码.java文件和apt下的.java文件会合并打包。在我们继承接口时即```implements AccountManager```会认为是导入同名包的下的代码，不会有import语句。
+当Rebuild项目时，会在app/build/generated/sourceapt目录下，生成目标类的同名包以及动态生成的高层类。最终在apk打包过程中源码.java文件和apt下的.java文件会合并打包。在我们继承接口时即```implements AccountManager```会认为是导入同名包的下的代码，不会有import语句。
 
-## 辅助重构-最终弃用
+## 关于代码输出模式
 
 重构是一个渐进的过程，从最初的实现类反向生成接口类。接口类可能会修改。动态的反向可以带来便利。只要添加/修改实现类方法参数/返回值以及它们的注解，rebuild就会马上生成接口。一次修改（否则就要修改接口类和实现类的方法，两次修改）。
 
-当重构完成或者更高层抽象分离出来（比如动态代理，直接抽象方法内部实现逻辑），我们的高层类最终确定，就不需要build项目时动态生成反向接口类。
+当重构完成或者更高层抽象分离出来（比如动态代理，直接抽象方法内部实现逻辑），我们的高层类最终确定，就不需要build项目时每次都动态生成代码，每次build动态生成反而可能拖慢了项目的编译时间。
 
-每次build动态生成反而可能拖慢了项目的编译时间。这时就可以从动态文件包app-build-generated-sourceapt中复制出接口类放到适合的包。从而弃用`@ReverseImpl`/`@ReverseExtend`注解。完成它辅助重构的使命。
+就可以修改默认的代码输出mode模式，
+```java
+/**
+   * 指定代码输出模式 默认build模式
+   * @return
+   */
+  ReverseOutMode mode() default ReverseOutMode.Build;
+```
+
+修改为`ReverseOutMode.Src`模式，代码会输出到源代码src目录同名包下。
+
 
 # 项目灵感
 源自大名鼎鼎的[butterknife](https://github.com/JakeWharton/butterknife/tree/master/butterknife-compiler)对注解处理器的应用。
