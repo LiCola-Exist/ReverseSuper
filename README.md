@@ -15,8 +15,8 @@
 # 引用
 
 ```java
-    implementation 'com.licola:reversesuper-annotation:1.2.0'//注解库
-    annotationProcessor 'com.licola:reversesuper-compiler:1.2.0'//代码生成工具库
+    implementation 'com.licola:reversesuper-annotation:1.2.2'//注解库
+    annotationProcessor 'com.licola:reversesuper-compiler:1.2.2'//代码生成工具库
 ```
 
 # 使用
@@ -70,7 +70,7 @@ public class AccountManagerImpl implements AccountManager {
 
 }
 ```
-当```@ReverseImpl```注解在目标类上，点击Build-Rebuild，就会动态生成对应的接口类。并且最终的生成代码其实和目标类在相同包下（apk打包过程）。
+当```@ReverseImpl```注解在目标类上，点击Build-Rebuild，就会动态生成对应的接口类。并且最终的生成代码其实和目标类在相同包下（src包和build包打包时合并）。
 
 ![生成的代码](https://github.com/LiCola/ReverseSuper/blob/master/image/rebuild-code.png)
 
@@ -82,7 +82,7 @@ public class AccountManagerImpl implements AccountManager {
 # 项目背景
 在项目重构时，面对一些之前因为某些原因没有抽象的模块代码，直接实现功能而没有抽象出接口，直接对外暴露实现类。
 
-当需要把实现类抽象成接口，对外暴露接口，从而实现对接口的mock操作或者装饰者模式添加功能时或者其他操作。
+当需要把实现类抽象成接口，对外暴露接口，从而实现对接口的mock隔离、装饰者模式添加功能时或者其他操作。
 
 抽象实现类成接口是我们的目标，一般少量的代码手动就可以完成，但是面对大量的实现类需要抽象出接口,这个工作量就是巨大的。
 
@@ -101,7 +101,7 @@ public class AccountManagerImpl implements AccountManager {
 >
 > 一般的写代码是从接口（上层）->实现类（下层）。
 >
-> 抽象重构时面对实现类（下层），反而生成接口类（高层），所以就是Reverse反向。
+> 抽象重构时面对实现类（下层），反而生成接口类（上层），所以就是Reverse反向。
 
 
 # 说明
@@ -110,37 +110,36 @@ public class AccountManagerImpl implements AccountManager {
 
 参照阿里巴巴Java开发手册-编程规约-命名风格。
 > 14.接口和实现类的命名规则：
->
 >【强制】对于 Service 和 DAO 类，基于 SOA 的理念，暴露出来的服务一定是接口，内部的实现类用 Impl 的后缀与接口区别。
 > 正例： CacheServiceImpl 实现 CacheService 接口
-
 >【推荐】如果是形容能力的接口名称，取对应的形容词做接口名 （ 通常是–able 的形式）。
 正例： AbstractTranslator 实现 Translatable。
 
 这里有两套规则，对应的到`@ReverseImpl`注解中两个可选项。其中默认实现【强制】的Impl命名风格。
 ```java
- /**
-  * 反向生成高层接口类注解
-  * 被标记的类在编译时，会在build目录下的同级包 生成接口类
-  */
- @Target(ElementType.TYPE)
- @Retention(RetentionPolicy.CLASS)
- public @interface ReverseImpl {
-   /**
-    * 被标注类的名称后缀 默认是命名是 Impl
-    * 默认规则 如：AccountMangerImpl(标记类)->AccountManager(生成的接口)
-    * 也可以根据实际实现类的后缀修改。
-    * 严格检查参数：必须是被标记类的后缀。
-    */
-   String targetSuffix() default "Impl";
+/**
+ * 反向生成高层接口类注解
+ * 被标记的类在编译时，会在build目录下的同级包 生成接口类
+ */
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+public @interface ReverseImpl {
 
-   /**
-    * 指定 生成接口名称
-    * 默认：默认该字段不作用，通过{@link #targetSuffix}裁剪约定后缀的标记类名称生成接口
-    * 非空输入：指定生成的接口名称，忽略后缀检查
-    * 如：AbstractTranslator->Translatable
-    */
-   String interfaceName() default "";
+  /**
+   * 被标注类的名称后缀 默认是命名是 Impl
+   * 默认规则 如：AccountMangerImpl(标记类)->AccountManager(生成的接口)
+   * 也可以根据实际实现类的后缀修改。
+   * 严格检查参数：必须是被标记类的后缀。
+   */
+  String targetSuffix() default "Impl";
+
+  /**
+   * 指定 生成接口名称
+   * 默认：默认该字段不作用，通过{@link #targetSuffix}裁剪约定后缀的标记类名称生成接口
+   * 非空输入：指定生成的接口名称，忽略后缀检查
+   * 如：AbstractTranslator->Translatable
+   */
+  String interfaceName() default "";
  }
 
 ```
@@ -155,7 +154,7 @@ public class AccountManagerImpl implements AccountManager {
  * 被标记的类在编译时，会在build目录下的同级包 生成抽象类
  */
 @Target(ElementType.TYPE)
-@Retention(RetentionPolicy.CLASS)
+@Retention(RetentionPolicy.RUNTIME)
 public @interface ReverseExtend {
 
 
@@ -178,17 +177,13 @@ public @interface ReverseExtend {
 }
 ```
 
-
-## 关于生成的java文件
-当Rebuild项目时，会在app/build/generated/sourceapt目录下，生成目标类的同名包以及动态生成的高层类。最终在apk打包过程中源码.java文件和apt下的.java文件会合并打包。在我们继承接口时即```implements AccountManager```会认为是导入同名包的下的代码，不会有import语句。
-
 ## 关于代码输出模式
 
 重构是一个渐进的过程，从最初的实现类反向生成接口类。接口类可能会修改。动态的反向可以带来便利。只要添加/修改实现类方法参数/返回值以及它们的注解，rebuild就会马上生成接口。一次修改（否则就要修改接口类和实现类的方法，两次修改）。
 
 当重构完成或者更高层抽象分离出来（比如动态代理，直接抽象方法内部实现逻辑），我们的高层类最终确定，就不需要build项目时每次都动态生成代码，每次build动态生成反而可能拖慢了项目的编译时间。
 
-就可以修改默认的代码输出mode模式，
+就可以修改`@ReverseImpl/@ReverseExtend`默认的代码输出mode模式，
 ```java
 /**
    * 指定代码输出模式 默认build模式
@@ -199,6 +194,13 @@ public @interface ReverseExtend {
 
 修改为`ReverseOutMode.Src`模式，代码会输出到源代码src目录同名包下。
 
+# 最后
+其实针对简单少量的实现类需要抽象成接口，可以通过AS的`Extract`功能，通过窗口选择生成代码。
+![as-提取功能](https://github.com/LiCola/ReverseSuper/blob/master/image/as-extract.png)
+
+但是AS目前只提供
+- 只提供实现类提取接口，没有提取抽象类功能。
+- 通过窗口选择，还是慢。不够灵活，只是一次生成。
 
 # 项目灵感
 源自大名鼎鼎的[butterknife](https://github.com/JakeWharton/butterknife/tree/master/butterknife-compiler)对注解处理器的应用。
