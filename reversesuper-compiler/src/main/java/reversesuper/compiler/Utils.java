@@ -38,21 +38,4 @@ class Utils {
         Locale.CHINA).format(new Date());
   }
 
-  static void writeToJavaFile(TypeSpecPackage typeSpecPackage) {
-
-    JavaFile javaFile = JavaFile
-        .builder(typeSpecPackage.getPackageElement().getQualifiedName().toString(),
-            typeSpecPackage.getTypeSpec()).build();
-    try {
-
-      if (typeSpecPackage.getSrcFile() != null) {
-        javaFile.writeTo(typeSpecPackage.getSrcFile());
-      } else if (typeSpecPackage.getBuildFiler() != null) {
-        javaFile.writeTo(typeSpecPackage.getBuildFiler());
-      }
-
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-  }
 }

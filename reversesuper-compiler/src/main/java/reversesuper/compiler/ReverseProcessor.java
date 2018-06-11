@@ -2,17 +2,18 @@ package reversesuper.compiler;
 
 import static reversesuper.compiler.Utils.checkExistReverse;
 import static reversesuper.compiler.Utils.getPackageElement;
-import static reversesuper.compiler.Utils.writeToJavaFile;
 
 import com.google.auto.common.MoreElements;
 import com.google.auto.service.AutoService;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import java.io.File;
+import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -92,7 +93,7 @@ public class ReverseProcessor extends AbstractProcessor {
     //检查重复注解
     checkOverlap(elementImplSet, elementSuperSet);
 
-    List<TypeSpecPackage> specs = new ArrayList<>();
+    List<OutWriteCommand> commands = new ArrayList<>();
 
     //构造接口代码 遍历被注解的目标类 获取信息
     for (Element elementItem : elementImplSet) {
@@ -105,16 +106,21 @@ public class ReverseProcessor extends AbstractProcessor {
         continue;
       }
 
-      TypeSpecPackage typeSpecPackage = null;
-      if (mode == ReverseOutMode.Build) {
-        typeSpecPackage = TypeSpecPackage.createByBuild(packageElement, typeSpec, writeFiler);
-      } else if (mode == ReverseOutMode.SRC) {
-        typeSpecPackage = TypeSpecPackage.createBySrc(packageElement, typeSpec, writeFile);
-      }
+      commands.add(new OutWriteCommand() {
+        @Override
+        public void execute() throws IOException {
 
-      if (typeSpecPackage != null) {
-        specs.add(typeSpecPackage);
-      }
+          JavaFile javaFile = JavaFile
+              .builder(packageElement.getQualifiedName().toString(),
+                  typeSpec).build();
+          if (mode == ReverseOutMode.Build) {
+            javaFile.writeTo(writeFiler);
+          } else if (mode == ReverseOutMode.SRC) {
+            javaFile.writeTo(writeFile);
+          }
+        }
+      });
+
     }
 
     //构造抽象类代码
@@ -128,21 +134,28 @@ public class ReverseProcessor extends AbstractProcessor {
         continue;
       }
 
-      TypeSpecPackage typeSpecPackage = null;
-      if (mode == ReverseOutMode.Build) {
-        typeSpecPackage = TypeSpecPackage.createByBuild(packageElement, typeSpec, writeFiler);
-      } else if (mode == ReverseOutMode.SRC) {
-        typeSpecPackage = TypeSpecPackage.createBySrc(packageElement, typeSpec, writeFile);
-      }
-
-      if (typeSpecPackage != null) {
-        specs.add(typeSpecPackage);
-      }
+      commands.add(new OutWriteCommand() {
+        @Override
+        public void execute() throws IOException {
+          JavaFile javaFile = JavaFile
+              .builder(packageElement.getQualifiedName().toString(),
+                  typeSpec).build();
+          if (mode == ReverseOutMode.Build) {
+            javaFile.writeTo(writeFiler);
+          } else if (mode == ReverseOutMode.SRC) {
+            javaFile.writeTo(writeFile);
+          }
+        }
+      });
     }
 
-    //依次生成代码
-    for (TypeSpecPackage item : specs) {
-      writeToJavaFile(item);
+    try {
+      //依次生成代码
+      for (OutWriteCommand item : commands) {
+        item.execute();
+      }
+    } catch (IOException e) {
+      throw new RuntimeException(e);
     }
 
     return true;

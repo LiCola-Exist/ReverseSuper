@@ -10,13 +10,13 @@
 
 - 1.2.1：完善检查逻辑
 - 1.2.2：新增代码输出模式，可以指定代码生成到src目录，避免每次生成
-
+- 1.2.3：使用命令设计模式，优化代码结构
 
 # 引用
 
 ```java
-    implementation 'com.licola:reversesuper-annotation:1.2.2'//注解库
-    annotationProcessor 'com.licola:reversesuper-compiler:1.2.2'//代码生成工具库
+    implementation 'com.licola:reversesuper-annotation:1.2.3'//注解库
+    annotationProcessor 'com.licola:reversesuper-compiler:1.2.3'//代码生成工具库
 ```
 
 # 使用
