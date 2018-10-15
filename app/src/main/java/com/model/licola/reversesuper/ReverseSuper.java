@@ -6,6 +6,7 @@ import java.io.FileNotFoundException;
 import java.util.zip.ZipException;
 import reversesuper.ReverseExtend;
 import reversesuper.ReverseImpl;
+import reversesuper.ReverseSkip;
 
 /**
  * @author LiCola
@@ -13,7 +14,7 @@ import reversesuper.ReverseImpl;
  */
 @ReverseImpl(interfaceName = "SuperInterface")
 @ReverseExtend(superName = "SuperClass")
-public class ReverseSuper extends SuperClass implements SuperInterface {
+public class ReverseSuper extends SuperClass implements SuperInterface, Runnable {
 
   /**
    * 被反向生成抽象方法的 目标方法
@@ -46,7 +47,7 @@ public class ReverseSuper extends SuperClass implements SuperInterface {
   }
 
   @Override
-  public void reversMethod(String input) throws FileNotFoundException,ZipException {
+  public void reversMethod(String input) throws FileNotFoundException, ZipException {
     throw new FileNotFoundException("");
   }
 
@@ -63,4 +64,14 @@ public class ReverseSuper extends SuperClass implements SuperInterface {
   int getView() {
     return 0;
   }
+
+  /**
+   * 实现Runnable接口的方法，但是反向类并不需要生成该方法，可以打上 ReverseSkip注解 表示跳过该方法
+   */
+  @ReverseSkip
+  @Override
+  public void run() {
+
+  }
+
 }

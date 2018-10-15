@@ -4,7 +4,6 @@ import static reversesuper.compiler.Utils.checkExistReverse;
 import static reversesuper.compiler.Utils.getPackageElement;
 
 import com.google.auto.common.MoreElements;
-import com.google.auto.common.MoreTypes;
 import com.google.auto.service.AutoService;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
@@ -42,6 +41,7 @@ import javax.tools.Diagnostic.Kind;
 import reversesuper.ReverseExtend;
 import reversesuper.ReverseImpl;
 import reversesuper.ReverseOutMode;
+import reversesuper.ReverseSkip;
 
 /**
  * Created by LiCola on 2017/6/21.
@@ -354,7 +354,10 @@ public class ReverseProcessor extends AbstractProcessor {
       modifierList[1] = Modifier.ABSTRACT;
 
       //添加接口抽象方法
-      methodSpecs.add(buildInterfaceMethod(executableElement, modifierList));
+      MethodSpec methodSpec = buildInterfaceMethod(executableElement, modifierList);
+      if (methodSpec != null) {
+        methodSpecs.add(methodSpec);
+      }
     }
 
     return methodSpecs;
@@ -375,6 +378,11 @@ public class ReverseProcessor extends AbstractProcessor {
       if (Override.class.getSimpleName().equals(typeElement.getSimpleName().toString())) {
         continue;
       }
+
+      if (ReverseSkip.class.getSimpleName().equals(typeElement.getSimpleName().toString())) {
+        return null;
+      }
+
       methodSpecBuild.addAnnotation(AnnotationSpec.get(item));
     }
 
@@ -393,7 +401,6 @@ public class ReverseProcessor extends AbstractProcessor {
     for (TypeMirror typeMirror : executableElement.getThrownTypes()) {
       methodSpecBuild.addException(ClassName.get(typeMirror));
     }
-
 
     return methodSpecBuild.build();
   }

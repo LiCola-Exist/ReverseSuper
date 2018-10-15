@@ -12,12 +12,13 @@
 - 1.2.2：新增代码输出模式，可以指定代码生成到src目录，避免每次生成
 - 1.2.3：使用命令设计模式，优化代码结构
 - 1.2.4：生成的方法支持受检异常的声明
+- 1.2.5：新增@ReverseSkip注解，支持对目标类特定方法的忽略处理
 
 # 引用
 
 ```java
-    implementation 'com.licola:reversesuper-annotation:1.2.4'//注解库
-    annotationProcessor 'com.licola:reversesuper-compiler:1.2.4'//代码生成工具库
+    implementation 'com.licola:reversesuper-annotation:1.2.5'//注解库
+    annotationProcessor 'com.licola:reversesuper-compiler:1.2.5'//代码生成工具库
 ```
 
 # 使用
