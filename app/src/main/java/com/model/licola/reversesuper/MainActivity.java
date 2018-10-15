@@ -13,6 +13,7 @@ public class MainActivity extends AppCompatActivity {
 
     AccountManager impl = new AccountManagerImpl();
 
+
     Log.d("MainActivity", impl.reverseMethod("调用方法"));
     Log.d("MainActivity", impl.reversMethod(10));
 

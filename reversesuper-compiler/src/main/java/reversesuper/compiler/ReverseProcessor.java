@@ -4,6 +4,7 @@ import static reversesuper.compiler.Utils.checkExistReverse;
 import static reversesuper.compiler.Utils.getPackageElement;
 
 import com.google.auto.common.MoreElements;
+import com.google.auto.common.MoreTypes;
 import com.google.auto.service.AutoService;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
@@ -12,13 +13,13 @@ import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
+import com.squareup.javapoet.TypeSpec.Builder;
 import java.io.File;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Set;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Filer;
@@ -36,6 +37,7 @@ import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeKind;
+import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic.Kind;
 import reversesuper.ReverseExtend;
 import reversesuper.ReverseImpl;
@@ -90,21 +92,29 @@ public class ReverseProcessor extends AbstractProcessor {
     Set<? extends Element> elementSuperSet = roundEnvironment
         .getElementsAnnotatedWith(ReverseExtend.class);//得到被注解目标类们
 
-    //检查重复注解
-    checkOverlap(elementImplSet, elementSuperSet);
-
     List<OutWriteCommand> commands = new ArrayList<>();
 
     //构造接口代码 遍历被注解的目标类 获取信息
     for (Element elementItem : elementImplSet) {
 
+      //获取输出模式
       ReverseOutMode mode = elementItem.getAnnotation(ReverseImpl.class).mode();
+      //获取包信息
       PackageElement packageElement = getPackageElement(elementItem);
-      TypeSpec typeSpec = buildInterface(elementItem, packageElement, mode);
-
-      if (typeSpec == null) {
+      //构建接口build
+      Builder buildInterface = buildInterface(elementItem, packageElement, mode);
+      if (buildInterface == null) {
         continue;
       }
+
+      //获取有效的方法集合
+      List<MethodSpec> validMethods = getValidMethods(elementItem);
+      if (!CheckUtils.isEmpty(validMethods)) {
+        buildInterface.addMethods(validMethods);
+      }
+
+      //完成新接口类的构建
+      TypeSpec typeSpec = buildInterface.build();
 
       commands.add(new OutWriteCommand() {
         @Override
@@ -128,11 +138,18 @@ public class ReverseProcessor extends AbstractProcessor {
 
       ReverseOutMode mode = elementItem.getAnnotation(ReverseExtend.class).mode();
       PackageElement packageElement = getPackageElement(elementItem);
-      TypeSpec typeSpec = buildSuper(elementItem, packageElement, mode);
 
-      if (typeSpec == null) {
+      Builder buildSuper = buildSuper(elementItem, packageElement, mode);
+
+      if (buildSuper == null) {
         continue;
       }
+
+      List<MethodSpec> validMethods = getValidMethods(elementItem);
+      if (!CheckUtils.isEmpty(validMethods)) {
+        buildSuper.addMethods(validMethods);
+      }
+      TypeSpec typeSpec = buildSuper.build();
 
       commands.add(new OutWriteCommand() {
         @Override
@@ -161,33 +178,14 @@ public class ReverseProcessor extends AbstractProcessor {
     return true;
   }
 
-
-  private void checkOverlap(Set<? extends Element> elementImplSet,
-      Set<? extends Element> elementSuperSet) {
-    List<Element> overlapElement = new ArrayList<>();
-    for (Element element : elementSuperSet) {
-      if (elementImplSet.contains(element)) {
-        overlapElement.add(element);
-      }
-    }
-
-    if (!CheckUtils.isEmpty(overlapElement)) {
-      for (Element element : overlapElement) {
-        error(element, "%s类不能同时被@ReverseImpl和@ReverseExtend注解", element.getSimpleName().toString());
-      }
-      throw new IllegalArgumentException(String
-          .format(Locale.CHINA, "存在%d个类被@ReverseImpl和@ReverseExtend重复注解", overlapElement.size()));
-    }
-  }
-
-  private TypeSpec buildSuper(Element element, PackageElement packageElement,
+  private TypeSpec.Builder buildSuper(Element element, PackageElement packageElement,
       ReverseOutMode mode) {
 
-    String superName = getSuperNameByTarget(element);
+    String superName = getSuperName(element);
 
     TypeSpec.Builder classSpecBuild = TypeSpec.classBuilder(superName)
         .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
-        .addJavadoc("Created by $L on $L \n", ReverseExtend.class.getSimpleName(),
+        .addJavadoc("Created by @$L on $L \n", ReverseExtend.class.getSimpleName(),
             Utils.getNowTime())
         .addJavadoc("该抽象类由{@link $L}类自动生成\n", element.getSimpleName().toString());
 
@@ -205,18 +203,18 @@ public class ReverseProcessor extends AbstractProcessor {
       return null;
     }
 
-    return buildByElement(element, classSpecBuild);
+    return classSpecBuild;
   }
 
-  private TypeSpec buildInterface(Element element, PackageElement packageElement,
+  private TypeSpec.Builder buildInterface(Element element, PackageElement packageElement,
       ReverseOutMode mode) {
 
-    String interfaceName = getInterfaceNameByTarget(element);
+    String interfaceName = getInterfaceName(element);
 
     TypeSpec.Builder classSpecBuild =
         TypeSpec.interfaceBuilder(interfaceName)
             .addModifiers(Modifier.PUBLIC)
-            .addJavadoc("Created by $L on $L \n", ReverseImpl.class.getSimpleName(),
+            .addJavadoc("Created by @$L on $L \n", ReverseImpl.class.getSimpleName(),
                 Utils.getNowTime())
             .addJavadoc("该接口由{@link $L}类自动生成\n", element.getSimpleName().toString());
 
@@ -235,11 +233,11 @@ public class ReverseProcessor extends AbstractProcessor {
       return null;
     }
 
-    return buildByElement(element, classSpecBuild);
+    return classSpecBuild;
   }
 
 
-  private String getInterfaceNameByTarget(Element element) {
+  private String getInterfaceName(Element element) {
 
     String targetInterfaceName = element.getAnnotation(ReverseImpl.class)
         .interfaceName();//获取注解指定的接口名称
@@ -276,7 +274,7 @@ public class ReverseProcessor extends AbstractProcessor {
   }
 
 
-  private String getSuperNameByTarget(Element element) {
+  private String getSuperName(Element element) {
 
     String targetSuperName = element.getAnnotation(ReverseExtend.class).superName();
 
@@ -299,7 +297,9 @@ public class ReverseProcessor extends AbstractProcessor {
   /**
    * 根据传入的元素 构造接口类
    */
-  private TypeSpec buildByElement(Element element, TypeSpec.Builder classSpecBuild) {
+  private List<MethodSpec> getValidMethods(Element element) {
+
+    ArrayList<MethodSpec> methodSpecs = new ArrayList<>();
 
     //得到类内部全部定义元素（包括 域、静态方法、对象方法等）
     List<? extends Element> elementMethods = MoreElements.asType(element).getEnclosedElements();
@@ -329,32 +329,35 @@ public class ReverseProcessor extends AbstractProcessor {
       }
 
       if (modifiers.contains(Modifier.ABSTRACT)) {
-        //跳过抽象方法
+        //抽象方法 跳过
         continue;
       }
 
-      if (modifiers.contains(Modifier.FINAL)) {
-        //跳过final修饰的方法
-        continue;
-      }
-
+      //Super类肯定有2个修饰符
       Modifier[] modifierList = new Modifier[2];
 
       for (Modifier modifier : modifiers) {
-        if (modifier == Modifier.SYNCHRONIZED) {
-          //跳过synchronized 修饰符
+        if (Modifier.SYNCHRONIZED == modifier) {
+          //修饰符synchronized Super类方法不能修饰
           continue;
         }
+
+        if (Modifier.FINAL == modifier) {
+          //修饰符final Super类方法不能修饰
+          continue;
+        }
+
         modifierList[0] = modifier;
       }
 
+      //固定的修饰符
       modifierList[1] = Modifier.ABSTRACT;
 
       //添加接口抽象方法
-      classSpecBuild.addMethod(buildInterfaceMethod(executableElement, modifierList));
+      methodSpecs.add(buildInterfaceMethod(executableElement, modifierList));
     }
 
-    return classSpecBuild.build();
+    return methodSpecs;
 
   }
 
@@ -384,8 +387,13 @@ public class ReverseProcessor extends AbstractProcessor {
 
     //添加方法参数 注解
     for (VariableElement variableElement : executableElement.getParameters()) {
-      methodSpecBuild.addParameter(getParameterSpaceByVariable(variableElement));
+      methodSpecBuild.addParameter(getParameterSpace(variableElement));
     }
+
+    for (TypeMirror typeMirror : executableElement.getThrownTypes()) {
+      methodSpecBuild.addException(ClassName.get(typeMirror));
+    }
+
 
     return methodSpecBuild.build();
   }
@@ -394,7 +402,7 @@ public class ReverseProcessor extends AbstractProcessor {
   /**
    * 根据变量元素 构建参数 包括修饰符和参数注解
    */
-  private ParameterSpec getParameterSpaceByVariable(VariableElement element) {
+  private ParameterSpec getParameterSpace(VariableElement element) {
     TypeName type = TypeName.get(element.asType());
     String name = element.getSimpleName().toString();
 

@@ -20,10 +20,10 @@ class Utils {
         .asPackage(MoreElements.asType(elementItem).getEnclosingElement());
   }
 
-  static boolean checkExistReverse(PackageElement packageElement, String interfaceName) {
+  static boolean checkExistReverse(PackageElement packageElement, String targetClassName) {
     List<? extends Element> existElements = packageElement.getEnclosedElements();
     for (Element existElement : existElements) {
-      if (interfaceName.equals(existElement.getSimpleName().toString())) {
+      if (targetClassName.equals(existElement.getSimpleName().toString())) {
         //查到已经存在 生成类 不再处理
         return true;
       }

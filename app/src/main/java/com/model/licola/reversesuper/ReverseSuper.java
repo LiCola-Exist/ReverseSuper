@@ -3,22 +3,17 @@ package com.model.licola.reversesuper;
 import android.support.annotation.IntRange;
 import android.support.annotation.StringRes;
 import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.nio.file.FileAlreadyExistsException;
-import java.nio.file.NoSuchFileException;
 import java.util.zip.ZipException;
 import reversesuper.ReverseExtend;
 import reversesuper.ReverseImpl;
-import reversesuper.ReverseOutMode;
 
 /**
- * Created by LiCola on 2018/3/15.
- * 使用示例，主要针对已经存在的类，rebuild后就可生成对应的接口类。
- * 避免需要手动编写，针对项目重构，抽象等，加快开发。
- * 其中AccountManager接口类是动态生成，它抽象目标类的public方法
+ * @author LiCola
+ * @date 2018/10/15
  */
-@ReverseImpl
-public class AccountManagerImpl implements AccountManager {
+@ReverseImpl(interfaceName = "SuperInterface")
+@ReverseExtend(superName = "SuperClass")
+public class ReverseSuper extends SuperClass implements SuperInterface {
 
   /**
    * 被反向生成抽象方法的 目标方法
@@ -27,7 +22,7 @@ public class AccountManagerImpl implements AccountManager {
    * @return 固定返回
    */
   @Override
-  public String reverseMethod(String input) {
+  public final String reverseMethod(String input) {
     return "被反向生成抽象方法的 目标方法";
   }
 
@@ -38,7 +33,7 @@ public class AccountManagerImpl implements AccountManager {
    * @return 固定返回值
    */
   @Override
-  public String reversMethod(@IntRange(from = 0, to = 10) Integer integer) {
+  public synchronized String reversMethod(@IntRange(from = 0, to = 10) Integer integer) {
     //展示 方法参数注解 反向生成的能力
     return "被反向生成抽象方法的 目标方法-带参数注解";
   }
@@ -55,10 +50,17 @@ public class AccountManagerImpl implements AccountManager {
     throw new FileNotFoundException("");
   }
 
-  private String value = "不会被处理非方法信息 变量";
-
+  /**
+   * 私有方法不会反向生成
+   */
   private void privateMethod() {
     //不会被反向生成的私有方法
   }
 
+  /**
+   * 默认访问修饰的方法 不会被反向
+   */
+  int getView() {
+    return 0;
+  }
 }
