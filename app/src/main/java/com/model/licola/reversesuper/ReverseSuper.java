@@ -7,8 +7,11 @@ import java.util.zip.ZipException;
 import reversesuper.ReverseExtend;
 import reversesuper.ReverseImpl;
 import reversesuper.ReverseSkip;
+import reversesuper.ReverseSkipMode;
 
 /**
+ * 极端情况下，一个目标类被两个注解标记，会同时生成抽象类和接口 针对某些public方法可以针对的标记忽略
+ *
  * @author LiCola
  * @date 2018/10/15
  */
@@ -52,6 +55,27 @@ public class ReverseSuper extends SuperClass implements SuperInterface, Runnable
   }
 
   /**
+   * 实现Runnable接口的方法，但是反向类并不需要生成该方法，可以打上 ReverseSkip注解 表示跳过该方法
+   */
+  @ReverseSkip
+  @Override
+  public void run() {
+
+  }
+
+  @Override
+  @ReverseSkip(mode = ReverseSkipMode.Extend)
+  public void onlyReversImplMethod() {
+
+  }
+
+  @Override
+  @ReverseSkip(mode = ReverseSkipMode.Impl)
+  public void onlyReversExtendMethod() {
+
+  }
+
+  /**
    * 私有方法不会反向生成
    */
   private void privateMethod() {
@@ -65,13 +89,5 @@ public class ReverseSuper extends SuperClass implements SuperInterface, Runnable
     return 0;
   }
 
-  /**
-   * 实现Runnable接口的方法，但是反向类并不需要生成该方法，可以打上 ReverseSkip注解 表示跳过该方法
-   */
-  @ReverseSkip
-  @Override
-  public void run() {
-
-  }
 
 }

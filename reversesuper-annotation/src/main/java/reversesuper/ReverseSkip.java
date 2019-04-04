@@ -15,4 +15,9 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ReverseSkip {
 
+  /**
+   * 指定忽略模式 默认对抽象了和接口全部忽略
+   * @return
+   */
+  ReverseSkipMode mode() default ReverseSkipMode.All;
 }

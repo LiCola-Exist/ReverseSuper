@@ -42,6 +42,7 @@ import reversesuper.ReverseExtend;
 import reversesuper.ReverseImpl;
 import reversesuper.ReverseOutMode;
 import reversesuper.ReverseSkip;
+import reversesuper.ReverseSkipMode;
 
 /**
  * Created by LiCola on 2017/6/21.
@@ -108,7 +109,7 @@ public class ReverseProcessor extends AbstractProcessor {
       }
 
       //获取有效的方法集合
-      List<MethodSpec> validMethods = getValidMethods(elementItem);
+      List<MethodSpec> validMethods = getValidMethods(elementItem, ReverseSkipMode.Impl);
       if (!CheckUtils.isEmpty(validMethods)) {
         buildInterface.addMethods(validMethods);
       }
@@ -145,7 +146,7 @@ public class ReverseProcessor extends AbstractProcessor {
         continue;
       }
 
-      List<MethodSpec> validMethods = getValidMethods(elementItem);
+      List<MethodSpec> validMethods = getValidMethods(elementItem, ReverseSkipMode.Extend);
       if (!CheckUtils.isEmpty(validMethods)) {
         buildSuper.addMethods(validMethods);
       }
@@ -297,7 +298,7 @@ public class ReverseProcessor extends AbstractProcessor {
   /**
    * 根据传入的元素 构造接口类
    */
-  private List<MethodSpec> getValidMethods(Element element) {
+  private List<MethodSpec> getValidMethods(Element element, ReverseSkipMode skipMode) {
 
     ArrayList<MethodSpec> methodSpecs = new ArrayList<>();
 
@@ -311,6 +312,16 @@ public class ReverseProcessor extends AbstractProcessor {
       }
 
       ExecutableElement executableElement = MoreElements.asExecutable(elementItem);
+
+      //跳过忽略注解标注的方法
+      ReverseSkip reverseSkip = executableElement.getAnnotation(ReverseSkip.class);
+      if (reverseSkip != null) {
+        ReverseSkipMode methodSkipMode = reverseSkip.mode();
+        if (ReverseSkipMode.All == methodSkipMode || skipMode == methodSkipMode) {
+          continue;
+        }
+      }
+
       Set<Modifier> modifiers = executableElement.getModifiers();
 
       if (modifiers.isEmpty()) {
@@ -355,9 +366,7 @@ public class ReverseProcessor extends AbstractProcessor {
 
       //添加接口抽象方法
       MethodSpec methodSpec = buildInterfaceMethod(executableElement, modifierList);
-      if (methodSpec != null) {
-        methodSpecs.add(methodSpec);
-      }
+      methodSpecs.add(methodSpec);
     }
 
     return methodSpecs;
@@ -374,13 +383,15 @@ public class ReverseProcessor extends AbstractProcessor {
     //添加方法返回值的 注解
     for (AnnotationMirror item : executableElement.getAnnotationMirrors()) {
       TypeElement typeElement = MoreElements.asType(item.getAnnotationType().asElement());
-      //跳过实现类的Overrider重写注解
+
+      //跳过Overrider重写注解
       if (Override.class.getSimpleName().equals(typeElement.getSimpleName().toString())) {
         continue;
       }
 
+      //跳过ReverseSkip忽略注解
       if (ReverseSkip.class.getSimpleName().equals(typeElement.getSimpleName().toString())) {
-        return null;
+        continue;
       }
 
       methodSpecBuild.addAnnotation(AnnotationSpec.get(item));

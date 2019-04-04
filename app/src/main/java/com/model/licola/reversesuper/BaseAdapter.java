@@ -5,7 +5,7 @@ import java.lang.Integer;
 import java.lang.String;
 
 /**
- * Created by ReverseExtend on 2018/06/07 18:31:08 
+ * Created by @ReverseExtend on 2019/04/04 11:09:16 
  * 该抽象类由{@link Adapter}类自动生成
  * 注：同名包下，存在BaseAdapter就不会再次生成代码
  */

@@ -5,7 +5,6 @@ import android.support.annotation.StringRes;
 import java.io.FileNotFoundException;
 import java.util.zip.ZipException;
 import reversesuper.ReverseImpl;
-import reversesuper.ReverseSkip;
 
 /**
  * Created by LiCola on 2018/3/15. 使用示例，主要针对已经存在的类，rebuild后就可生成对应的接口类。 避免需要手动编写，针对项目重构，抽象等，加快开发。
