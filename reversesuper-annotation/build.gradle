@@ -20,4 +20,4 @@ allprojects {
     }
 }
 
-apply from : 'maven.gradle'
+apply from: 'maven.gradle'

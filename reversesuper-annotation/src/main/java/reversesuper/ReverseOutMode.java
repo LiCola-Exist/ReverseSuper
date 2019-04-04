@@ -1,8 +1,7 @@
 package reversesuper;
 
 /**
- * Created by LiCola on 2018/6/7.
- * 代码输出模式
+ * Created by LiCola on 2018/6/7. 代码输出模式
  */
 public enum ReverseOutMode {
 
@@ -10,7 +9,6 @@ public enum ReverseOutMode {
    * build模式 生成在app/build目录下
    */
   Build,
-
 
   /**
    * src模式 生成在app/src目录下

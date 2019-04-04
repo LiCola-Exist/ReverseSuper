@@ -1,8 +1,6 @@
 package reversesuper.compiler;
 
 import com.google.auto.common.MoreElements;
-import com.squareup.javapoet.JavaFile;
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
