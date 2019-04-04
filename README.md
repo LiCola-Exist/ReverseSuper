@@ -13,12 +13,13 @@
 - 1.2.3：使用命令设计模式，优化代码结构
 - 1.2.4：生成的方法支持受检异常的声明
 - 1.2.5：新增@ReverseSkip注解，支持对目标类特定方法的忽略处理
+- 1.2.6：新增ReverseSkipMode忽略模式，细化对目标类特定方法的细分忽略处理。
 
 # 引用
 
 ```java
-    implementation 'com.licola:reversesuper-annotation:1.2.5'//注解库
-    annotationProcessor 'com.licola:reversesuper-compiler:1.2.5'//代码生成工具库
+    implementation 'com.licola:reversesuper-annotation:1.2.6'//注解库
+    annotationProcessor 'com.licola:reversesuper-compiler:1.2.6'//代码生成工具库
 ```
 
 # 使用
@@ -195,6 +196,11 @@ public @interface ReverseExtend {
 ```
 
 修改为`ReverseOutMode.Src`模式，代码会输出到源代码src目录同名包下。
+
+## 关于忽略特定方法
+
+某些情况下一个目标类[ReverseSuper](https://github.com/LiCola/ReverseSuper/blob/master/app/src/main/java/com/model/licola/reversesuper/ReverseSuper.java)会有一个父类+多个接口的类结构关系。
+针对某个方法我们需要忽略，并不想生成反向的抽象方法。所以这里添加了对方法的注解@ReverseSkip+ReverseSkipMode忽略模式来处理这个问题。
 
 # 最后
 其实针对简单少量的实现类需要抽象成接口，可以通过AS的`Extract`功能，通过窗口选择生成代码。
